@@ -66,4 +66,58 @@ func TestParseConversationsJSON(t *testing.T) {
 			t.Fatal("expected error for invalid json, got nil")
 		}
 	})
+
+	t.Run("handles edge cases", func(t *testing.T) {
+		input := `[
+			{
+				"uuid": "empty-conv",
+				"name": "Empty",
+				"chat_messages": []
+			},
+			{
+				"uuid": "missing-sender",
+				"name": "No Sender",
+				"chat_messages": [
+					{ "text": "Who sent this?" }
+				]
+			},
+			{
+				"uuid": "complex-content",
+				"name": "Complex",
+				"chat_messages": [
+					{
+						"sender": "system",
+						"content": [
+							{ "text": "    Trimmed    " },
+							{ "unexpected": "ignored" },
+							{ "text": 123 },
+							{ "type": "wrapper", "content": [{ "text": "Deep" }] }
+						]
+					}
+				]
+			}
+		]`
+
+		entries, err := ParseConversationsJSON(strings.NewReader(input))
+		if err != nil {
+			t.Fatalf("ParseConversationsJSON returned error: %v", err)
+		}
+
+		if len(entries) != 2 {
+			t.Fatalf("expected 2 entries, got %d", len(entries))
+		}
+
+		// Check missing sender behavior
+		noSender := entries[0]
+		if noSender.Speaker != "unknown" {
+			t.Errorf("expected unknown speaker, got %q", noSender.Speaker)
+		}
+
+		// Check complex content behavior
+		complex := entries[1]
+		expectedMessage := "Trimmed\nDeep"
+		if complex.Message != expectedMessage {
+			t.Errorf("expected message %q, got %q", expectedMessage, complex.Message)
+		}
+	})
 }

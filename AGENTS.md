@@ -13,6 +13,7 @@ Always use Red/Green TDD to build, prefer the concise table driven tests approac
 # Subagent tasks
 
 Subagent role has the tasks:
-- update docs/architecture.md, including mermaid diagrams for the system design as well as user journey
-
+- update docs/architecture.md, including mermaid diagrams for the system design as well as the user journey
+- make sure existing tests are passing
+- add any missing "high value" tests (happy path, most critical or likely edge cases); do not attempt fake "full coverage"
 

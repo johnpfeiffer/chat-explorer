@@ -31,7 +31,7 @@ Incrementally you can check things with:
 
 **/backend**
 
-- `go test -v .`
+- `go test -v ./...`
 
 # Building
 

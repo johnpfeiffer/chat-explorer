@@ -58,4 +58,23 @@ describe('App happy path', () => {
         expect(screen.getByText('How do I export data?')).toBeTruthy();
         expect(screen.getByText('Open Settings and click Export data.')).toBeTruthy();
     });
+
+    it('displays error message when loading fails', async () => {
+        mockedOpenConversationsFile.mockRejectedValue(new Error('Failed to read file'));
+
+        render(<App />);
+
+        fireEvent.click(screen.getByRole('button', {name: 'Open conversations.json'}));
+
+        await waitFor(() => {
+            expect(mockedOpenConversationsFile).toHaveBeenCalledTimes(1);
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText('Failed to read file')).toBeTruthy();
+        });
+
+        // Ensure we still show the default empty state or at least not a crash
+        expect(screen.getByText('No messages loaded.')).toBeTruthy();
+    });
 });
