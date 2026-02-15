@@ -1,7 +1,13 @@
 # chat-explorer
-Explore the data in a Claude or ChatGPT export
+
+A desktop app for visualizing and exploring the data conversations exported from an LLM chat app like Claude.
+
+<https://support.claude.com/en/articles/9450526-how-can-i-export-my-claude-data>
 
 
+## TODO
+
+- support a ChatGPT export
 
 # Technical Details
 
