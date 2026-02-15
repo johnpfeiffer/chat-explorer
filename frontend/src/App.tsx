@@ -1,5 +1,8 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
     Alert,
     Box,
     Button,
@@ -14,6 +17,7 @@ import {
 } from '@mui/material';
 import {OpenConversationsFile} from "../wailsjs/go/main/App";
 import type {models} from "../wailsjs/go/models";
+import {groupConversationEntries} from './models/conversations';
 
 type ConversationEntry = models.ConversationEntry;
 
@@ -59,7 +63,14 @@ function App() {
         }
     };
 
-    const statusLabel = entries.length === 0 ? 'No messages loaded.' : `${entries.length} messages loaded.`;
+    const conversations = useMemo(
+        () => groupConversationEntries(entries),
+        [entries]
+    );
+
+    const statusLabel = entries.length === 0
+        ? 'No messages loaded.'
+        : `${entries.length} messages loaded across ${conversations.length} conversations.`;
 
     const getSpeakerChipColor = (speaker: string): 'default' | 'success' | 'warning' => {
         const normalizedSpeaker = speaker.toLowerCase();
@@ -114,37 +125,76 @@ function App() {
                     <Paper
                         variant="outlined"
                         role="list"
-                        aria-label="Conversation messages"
+                        aria-label="Conversations"
                         sx={{p: 2, flex: 1, minHeight: 0, overflowY: 'auto'}}
                     >
                         {entries.length === 0 && !error && (
-                            <Typography color="text.secondary">Choose a file to start exploring messages.</Typography>
+                            <Typography color="text.secondary">Choose a file to start exploring conversations.</Typography>
                         )}
 
                         <Stack spacing={1.5}>
-                            {entries.map((entry, index) => (
-                                <Paper
+                            {conversations.map((conversation, conversationIndex) => (
+                                <Accordion
+                                    key={`${conversation.conversationId}-${conversationIndex}`}
                                     variant="outlined"
-                                    role="listitem"
-                                    key={`${entry.conversationId}-${entry.speaker}-${index}`}
-                                    sx={{p: 1.5, backgroundColor: '#fcfcf9'}}
+                                    disableGutters
+                                    TransitionProps={{unmountOnExit: true}}
+                                    sx={{backgroundColor: '#fcfcf9'}}
                                 >
-                                    <Stack direction={{xs: 'column', sm: 'row'}} spacing={1} useFlexGap sx={{mb: 1}}>
-                                        <Chip
-                                            label={entry.speaker}
-                                            size="small"
-                                            variant="outlined"
-                                            color={getSpeakerChipColor(entry.speaker)}
-                                            sx={{alignSelf: {xs: 'flex-start', sm: 'center'}}}
-                                        />
-                                        <Typography variant="caption" color="text.secondary">
-                                            {entry.conversationName || 'Untitled conversation'}
-                                        </Typography>
-                                    </Stack>
-                                    <Typography variant="body2" sx={{whiteSpace: 'pre-wrap'}}>
-                                        {entry.message}
-                                    </Typography>
-                                </Paper>
+                                    <AccordionSummary
+                                        aria-controls={`conversation-panel-${conversationIndex}`}
+                                        id={`conversation-header-${conversationIndex}`}
+                                        expandIcon={<Typography variant="caption">Open</Typography>}
+                                    >
+                                        <Stack
+                                            direction={{xs: 'column', sm: 'row'}}
+                                            spacing={1}
+                                            useFlexGap
+                                            sx={{width: '100%', alignItems: {sm: 'center'}}}
+                                        >
+                                            <Typography
+                                                data-testid="conversation-title"
+                                                variant="subtitle2"
+                                                sx={{fontWeight: 700}}
+                                            >
+                                                {conversation.conversationName}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {conversation.messages.length} {conversation.messages.length === 1 ? 'message' : 'messages'}
+                                            </Typography>
+                                            {conversation.conversationId && (
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {conversation.conversationId}
+                                                </Typography>
+                                            )}
+                                        </Stack>
+                                    </AccordionSummary>
+                                    <AccordionDetails>
+                                        <Stack spacing={1.5} role="list" aria-label={`${conversation.conversationName} messages`}>
+                                            {conversation.messages.map((entry, messageIndex) => (
+                                                <Paper
+                                                    variant="outlined"
+                                                    role="listitem"
+                                                    key={`${entry.conversationId}-${entry.speaker}-${messageIndex}`}
+                                                    sx={{p: 1.5, backgroundColor: '#ffffff'}}
+                                                >
+                                                    <Stack direction={{xs: 'column', sm: 'row'}} spacing={1} useFlexGap sx={{mb: 1}}>
+                                                        <Chip
+                                                            label={entry.speaker}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color={getSpeakerChipColor(entry.speaker)}
+                                                            sx={{alignSelf: {xs: 'flex-start', sm: 'center'}}}
+                                                        />
+                                                    </Stack>
+                                                    <Typography variant="body2" sx={{whiteSpace: 'pre-wrap'}}>
+                                                        {entry.message}
+                                                    </Typography>
+                                                </Paper>
+                                            ))}
+                                        </Stack>
+                                    </AccordionDetails>
+                                </Accordion>
                             ))}
                         </Stack>
                     </Paper>

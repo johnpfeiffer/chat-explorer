@@ -56,6 +56,10 @@ The frontend is a Single Page Application (SPA) served by Wails.
 *   **UI Component Library**: Material UI (@mui/material)
 *   **Testing**: Vitest + React Testing Library
 
+### Key Components
+*   **`App.tsx`**: Main component that manages state and renders the UI.
+*   **`models/conversations.ts`**: Contains the logic to group flat `ConversationEntry` items into `ConversationThread` objects, handling duplicate names and merging messages.
+
 ### Interaction
 The frontend communicates with the Go backend asynchronously through the Wails runtime.
 *   **`wailsjs/`**: Auto-generated TypeScript bindings for the Go methods (e.g., `OpenConversationsFile`). This ensures type safety between the backend and frontend.
@@ -93,5 +97,6 @@ sequenceDiagram
         App-->>UI: []ConversationEntry
     end
     
+    UI->>UI: Group Entries (by ID/Name)
     UI->>UI: Update State & Render List
 ```

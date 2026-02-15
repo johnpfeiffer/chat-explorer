@@ -95,6 +95,21 @@ func TestParseConversationsJSON(t *testing.T) {
 						]
 					}
 				]
+			},
+			{
+				"uuid": "mixed-types",
+				"name": "Mixed",
+				"chat_messages": [
+					{
+						"sender": "bot",
+						"content": [
+							123,
+							true,
+							{ "text": "Valid text" },
+							null
+						]
+					}
+				]
 			}
 		]`
 
@@ -103,8 +118,8 @@ func TestParseConversationsJSON(t *testing.T) {
 			t.Fatalf("ParseConversationsJSON returned error: %v", err)
 		}
 
-		if len(entries) != 2 {
-			t.Fatalf("expected 2 entries, got %d", len(entries))
+		if len(entries) != 3 {
+			t.Fatalf("expected 3 entries, got %d", len(entries))
 		}
 
 		// Check missing sender behavior
@@ -118,6 +133,69 @@ func TestParseConversationsJSON(t *testing.T) {
 		expectedMessage := "Trimmed\nDeep"
 		if complex.Message != expectedMessage {
 			t.Errorf("expected message %q, got %q", expectedMessage, complex.Message)
+		}
+
+		// Check mixed/ignored types in content
+		mixed := entries[2] // This is the new entry we will add to the input
+		if mixed.Message != "Valid text" {
+			t.Errorf("expected message 'Valid text', got %q", mixed.Message)
+		}
+	})
+
+	t.Run("prioritizes text field over content", func(t *testing.T) {
+		input := `[
+			{
+				"uuid": "precedence",
+				"name": "Precedence",
+				"chat_messages": [
+					{
+						"sender": "bot",
+						"text": "Top level text",
+						"content": [ { "text": "Ignored content" } ]
+					}
+				]
+			}
+		]`
+
+		entries, err := ParseConversationsJSON(strings.NewReader(input))
+		if err != nil {
+			t.Fatalf("ParseConversationsJSON returned error: %v", err)
+		}
+
+		if len(entries) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(entries))
+		}
+
+		if entries[0].Message != "Top level text" {
+			t.Errorf("expected message 'Top level text', got %q", entries[0].Message)
+		}
+	})
+
+	t.Run("handles deeply nested content", func(t *testing.T) {
+		// Construct a deeply nested JSON structure
+		depth := 100
+		var sb strings.Builder
+		sb.WriteString(`[{"uuid": "nested", "name": "Nested", "chat_messages": [{"sender": "me", "content": `)
+		for i := 0; i < depth; i++ {
+			sb.WriteString(`{"type": "wrapper", "content": [`)
+		}
+		sb.WriteString(`{"text": "Deepest"}`)
+		for i := 0; i < depth; i++ {
+			sb.WriteString(`]}`)
+		}
+		sb.WriteString(`}]}]`)
+
+		entries, err := ParseConversationsJSON(strings.NewReader(sb.String()))
+		if err != nil {
+			t.Fatalf("ParseConversationsJSON returned error: %v", err)
+		}
+
+		if len(entries) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(entries))
+		}
+
+		if entries[0].Message != "Deepest" {
+			t.Errorf("expected message 'Deepest', got %q", entries[0].Message)
 		}
 	})
 }

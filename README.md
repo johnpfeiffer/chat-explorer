@@ -38,3 +38,18 @@ Incrementally you can check things with:
 `wails build` to create the output binary
 
 
+# AI Agents
+
+to make this more self contained here are ai dev tools:
+
+**codex** 
+- `brew install --cask codex`
+- <https://github.com/openai/codex>
+- <https://developers.openai.com/codex/app>
+
+**gemini**
+- `brew install gemini-cli`
+- <https://github.com/google-gemini/gemini-cli>
+
+`echo "alias subagent='gemini'" >> ~/.zshenv`
+
