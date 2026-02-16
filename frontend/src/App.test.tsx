@@ -140,4 +140,37 @@ describe('App happy path', () => {
         // Ensure we still show the default empty state or at least not a crash
         expect(screen.getByText('No messages loaded.')).toBeTruthy();
     });
+
+    it('indicates loading state and updates last loaded timestamp', async () => {
+        let resolvePromise: (value: any) => void = () => {};
+        const promise = new Promise((resolve) => {
+            resolvePromise = resolve;
+        });
+        mockedOpenConversationsFile.mockReturnValue(promise as any);
+
+        render(<App />);
+
+        const button = screen.getByRole('button', {name: 'Open conversations.json'}) as HTMLButtonElement;
+        fireEvent.click(button);
+
+        expect(button.disabled).toBe(true);
+        expect(button.textContent).toBe('Loading...');
+
+        resolvePromise!([
+            {
+                conversationId: 'conv-1',
+                conversationName: 'Loaded',
+                speaker: 'human',
+                message: 'Content',
+                messageTimestamp: '2025-09-19T04:41:47.942021Z'
+            }
+        ]);
+
+        await waitFor(() => {
+            expect(button.disabled).toBe(false);
+        });
+        
+        expect(button.textContent).toBe('Open conversations.json');
+        expect(screen.getByText(/Last load:/)).toBeTruthy();
+    });
 });

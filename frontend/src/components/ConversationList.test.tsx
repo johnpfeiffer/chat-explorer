@@ -121,4 +121,28 @@ describe('ConversationList', () => {
         const reRenderedHeader = screen.getByRole('button', {name: /First Conversation/i});
         expect(reRenderedHeader.getAttribute('aria-expanded')).toBe('false');
     });
+
+    it('renders speaker chips with correct semantic colors', () => {
+        render(<ConversationList conversations={mockConversations} />);
+
+        // Expand first conversation (human)
+        const firstHeader = screen.getByRole('button', {name: /First Conversation/i});
+        fireEvent.click(firstHeader);
+
+        // Find the chip for "human"
+        // Note: We use getByText to find the chip label. 
+        // We need to ensure we get the chip, not just text.
+        // The Chip component renders a div with class MuiChip-root.
+        const humanChip = screen.getByText('human').closest('.MuiChip-root');
+        expect(humanChip).toBeTruthy();
+        expect(humanChip?.className).toContain('MuiChip-colorWarning');
+
+        // Expand second conversation (assistant)
+        const secondHeader = screen.getByRole('button', {name: /Second Conversation/i});
+        fireEvent.click(secondHeader);
+
+        const assistantChip = screen.getByText('assistant').closest('.MuiChip-root');
+        expect(assistantChip).toBeTruthy();
+        expect(assistantChip?.className).toContain('MuiChip-colorSuccess');
+    });
 });
