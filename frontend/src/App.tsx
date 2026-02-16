@@ -1,12 +1,8 @@
 import React, {useMemo, useState} from 'react';
 import {
-    Accordion,
-    AccordionDetails,
-    AccordionSummary,
     Alert,
     Box,
     Button,
-    Chip,
     Container,
     CssBaseline,
     Paper,
@@ -18,6 +14,7 @@ import {
 import {OpenConversationsFile} from "../wailsjs/go/main/App";
 import type {models} from "../wailsjs/go/models";
 import {groupConversationEntries} from './models/conversations';
+import {ConversationList} from './components/ConversationList';
 
 type ConversationEntry = models.ConversationEntry;
 
@@ -72,17 +69,6 @@ function App() {
         ? 'No messages loaded.'
         : `${entries.length} messages loaded across ${conversations.length} conversations.`;
 
-    const getSpeakerChipColor = (speaker: string): 'default' | 'success' | 'warning' => {
-        const normalizedSpeaker = speaker.toLowerCase();
-        if (normalizedSpeaker === 'assistant') {
-            return 'success';
-        }
-        if (normalizedSpeaker === 'human') {
-            return 'warning';
-        }
-        return 'default';
-    };
-
     return (
         <ThemeProvider theme={lightTheme}>
             <CssBaseline />
@@ -132,71 +118,7 @@ function App() {
                             <Typography color="text.secondary">Choose a file to start exploring conversations.</Typography>
                         )}
 
-                        <Stack spacing={1.5}>
-                            {conversations.map((conversation, conversationIndex) => (
-                                <Accordion
-                                    key={`${conversation.conversationId}-${conversationIndex}`}
-                                    variant="outlined"
-                                    disableGutters
-                                    TransitionProps={{unmountOnExit: true}}
-                                    sx={{backgroundColor: '#fcfcf9'}}
-                                >
-                                    <AccordionSummary
-                                        aria-controls={`conversation-panel-${conversationIndex}`}
-                                        id={`conversation-header-${conversationIndex}`}
-                                        expandIcon={<Typography variant="caption">Open</Typography>}
-                                    >
-                                        <Stack
-                                            direction={{xs: 'column', sm: 'row'}}
-                                            spacing={1}
-                                            useFlexGap
-                                            sx={{width: '100%', alignItems: {sm: 'center'}}}
-                                        >
-                                            <Typography
-                                                data-testid="conversation-title"
-                                                variant="subtitle2"
-                                                sx={{fontWeight: 700}}
-                                            >
-                                                {conversation.conversationName}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {conversation.messages.length} {conversation.messages.length === 1 ? 'message' : 'messages'}
-                                            </Typography>
-                                            {conversation.conversationId && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {conversation.conversationId}
-                                                </Typography>
-                                            )}
-                                        </Stack>
-                                    </AccordionSummary>
-                                    <AccordionDetails>
-                                        <Stack spacing={1.5} role="list" aria-label={`${conversation.conversationName} messages`}>
-                                            {conversation.messages.map((entry, messageIndex) => (
-                                                <Paper
-                                                    variant="outlined"
-                                                    role="listitem"
-                                                    key={`${entry.conversationId}-${entry.speaker}-${messageIndex}`}
-                                                    sx={{p: 1.5, backgroundColor: '#ffffff'}}
-                                                >
-                                                    <Stack direction={{xs: 'column', sm: 'row'}} spacing={1} useFlexGap sx={{mb: 1}}>
-                                                        <Chip
-                                                            label={entry.speaker}
-                                                            size="small"
-                                                            variant="outlined"
-                                                            color={getSpeakerChipColor(entry.speaker)}
-                                                            sx={{alignSelf: {xs: 'flex-start', sm: 'center'}}}
-                                                        />
-                                                    </Stack>
-                                                    <Typography variant="body2" sx={{whiteSpace: 'pre-wrap'}}>
-                                                        {entry.message}
-                                                    </Typography>
-                                                </Paper>
-                                            ))}
-                                        </Stack>
-                                    </AccordionDetails>
-                                </Accordion>
-                            ))}
-                        </Stack>
+                        <ConversationList conversations={conversations} />
                     </Paper>
                 </Container>
             </Box>

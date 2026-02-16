@@ -12,6 +12,7 @@ type ConversationEntry struct {
 	ConversationName string `json:"conversationName"`
 	Speaker          string `json:"speaker"`
 	Message          string `json:"message"`
+	MessageTimestamp string `json:"messageTimestamp"`
 }
 
 type rawConversation struct {
@@ -21,9 +22,10 @@ type rawConversation struct {
 }
 
 type rawChatMessage struct {
-	Sender  string `json:"sender"`
-	Text    string `json:"text"`
-	Content any    `json:"content"`
+	Sender    string `json:"sender"`
+	Text      string `json:"text"`
+	Content   any    `json:"content"`
+	CreatedAt string `json:"created_at"`
 }
 
 func ParseConversationsJSON(input io.Reader) ([]ConversationEntry, error) {
@@ -52,6 +54,7 @@ func ParseConversationsJSON(input io.Reader) ([]ConversationEntry, error) {
 				ConversationName: conversation.Name,
 				Speaker:          speaker,
 				Message:          message,
+				MessageTimestamp: extractMessageTimestamp(chatMessage),
 			})
 		}
 	}
@@ -67,6 +70,10 @@ func extractMessageText(chatMessage rawChatMessage) string {
 	parts := make([]string, 0, 2)
 	collectText(chatMessage.Content, &parts)
 	return strings.Join(parts, "\n")
+}
+
+func extractMessageTimestamp(chatMessage rawChatMessage) string {
+	return strings.TrimSpace(chatMessage.CreatedAt)
 }
 
 func collectText(node any, parts *[]string) {

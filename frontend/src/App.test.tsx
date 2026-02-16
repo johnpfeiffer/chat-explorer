@@ -4,6 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import App from './App';
 import {OpenConversationsFile} from '../wailsjs/go/main/App';
+import {formatMessageTimestamp} from './utils/timestamps';
 
 vi.mock('../wailsjs/go/main/App', () => ({
     OpenConversationsFile: vi.fn()
@@ -33,19 +34,22 @@ describe('App happy path', () => {
                 conversationId: 'conv-1',
                 conversationName: 'Setup',
                 speaker: 'human',
-                message: 'How do I export data?'
+                message: 'How do I export data?',
+                messageTimestamp: '2025-09-19T04:41:47.942021Z'
             },
             {
                 conversationId: 'conv-1',
                 conversationName: 'Setup',
                 speaker: 'assistant',
-                message: 'Open Settings and click Export data.'
+                message: 'Open Settings and click Export data.',
+                messageTimestamp: '2025-09-19T04:42:10.100000Z'
             },
             {
                 conversationId: 'conv-2',
                 conversationName: 'Another chat',
                 speaker: 'assistant',
-                message: 'Separate conversation.'
+                message: 'Separate conversation.',
+                messageTimestamp: '2025-09-19T05:01:00.000000Z'
             }
         ]);
 
@@ -63,6 +67,7 @@ describe('App happy path', () => {
 
         const setupAccordion = screen.getByRole('button', {name: /setup/i});
         expect(within(setupAccordion).getByText('2 messages')).toBeTruthy();
+        expect(within(setupAccordion).getByText('+')).toBeTruthy();
 
         expect(screen.queryByText('How do I export data?')).toBeNull();
         fireEvent.click(setupAccordion);
@@ -70,6 +75,8 @@ describe('App happy path', () => {
         await waitFor(() => {
             expect(screen.getByText('How do I export data?')).toBeTruthy();
         });
+        expect(within(setupAccordion).getByText('-')).toBeTruthy();
+        expect(screen.getByText(formatMessageTimestamp('2025-09-19T04:41:47.942021Z'))).toBeTruthy();
         expect(screen.getByText('Open Settings and click Export data.')).toBeTruthy();
 
         // Check chip colors
@@ -86,13 +93,15 @@ describe('App happy path', () => {
                 conversationId: 'conv-b',
                 conversationName: 'Second in alphabet',
                 speaker: 'assistant',
-                message: 'This appears first in the file.'
+                message: 'This appears first in the file.',
+                messageTimestamp: '2025-09-19T04:50:00.000000Z'
             },
             {
                 conversationId: 'conv-a',
                 conversationName: 'First in alphabet',
                 speaker: 'human',
-                message: 'This appears second in the file.'
+                message: 'This appears second in the file.',
+                messageTimestamp: '2025-09-19T04:51:00.000000Z'
             }
         ]);
 

@@ -5,6 +5,7 @@ export namespace models {
 	    conversationName: string;
 	    speaker: string;
 	    message: string;
+	    messageTimestamp: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConversationEntry(source);
@@ -16,6 +17,7 @@ export namespace models {
 	        this.conversationName = source["conversationName"];
 	        this.speaker = source["speaker"];
 	        this.message = source["message"];
+	        this.messageTimestamp = source["messageTimestamp"];
 	    }
 	}
 

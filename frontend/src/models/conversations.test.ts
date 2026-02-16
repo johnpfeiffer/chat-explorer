@@ -17,6 +17,7 @@ function entry(overrides: Partial<ConversationEntry>): ConversationEntry {
         conversationName: '',
         speaker: 'human',
         message: '',
+        messageTimestamp: '',
         ...overrides
     };
 }
@@ -75,6 +76,28 @@ describe('groupConversationEntries', () => {
             ],
             expectedConversationIDs: ['id-1'],
             expectedConversationNames: ['First Name'],
+            expectedMessageCounts: [2],
+            expectedFirstConversationMessages: ['Msg 1', 'Msg 2']
+        },
+        {
+            name: 'groups by name when conversation id is missing',
+            entries: [
+                entry({conversationId: '', conversationName: 'Same Name', message: 'Msg 1'}),
+                entry({conversationId: '   ', conversationName: 'Same Name', message: 'Msg 2'})
+            ],
+            expectedConversationIDs: [''],
+            expectedConversationNames: ['Same Name'],
+            expectedMessageCounts: [2],
+            expectedFirstConversationMessages: ['Msg 1', 'Msg 2']
+        },
+        {
+            name: 'groups untitled conversations together when id is missing',
+            entries: [
+                entry({conversationId: '', conversationName: '', message: 'Msg 1'}),
+                entry({conversationId: '', conversationName: '   ', message: 'Msg 2'})
+            ],
+            expectedConversationIDs: [''],
+            expectedConversationNames: ['Untitled conversation'],
             expectedMessageCounts: [2],
             expectedFirstConversationMessages: ['Msg 1', 'Msg 2']
         }

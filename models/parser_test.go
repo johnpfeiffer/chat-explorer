@@ -96,22 +96,22 @@ func TestParseConversationsJSON(t *testing.T) {
 					}
 				]
 			},
-			{
-				"uuid": "mixed-types",
-				"name": "Mixed",
-				"chat_messages": [
-					{
-						"sender": "bot",
-						"content": [
-							123,
-							true,
-							{ "text": "Valid text" },
-							null
-						]
-					}
-				]
-			}
-		]`
+				{
+					"uuid": "mixed-types",
+					"name": "Mixed",
+					"chat_messages": [
+						{
+							"sender": "bot",
+							"content": [
+								123,
+								true,
+								{ "text": "Valid text" },
+								null
+							]
+						}
+					]
+				}
+			]`
 
 		entries, err := ParseConversationsJSON(strings.NewReader(input))
 		if err != nil {
@@ -136,7 +136,7 @@ func TestParseConversationsJSON(t *testing.T) {
 		}
 
 		// Check mixed/ignored types in content
-		mixed := entries[2] // This is the new entry we will add to the input
+		mixed := entries[2]
 		if mixed.Message != "Valid text" {
 			t.Errorf("expected message 'Valid text', got %q", mixed.Message)
 		}
@@ -196,6 +196,133 @@ func TestParseConversationsJSON(t *testing.T) {
 
 		if entries[0].Message != "Deepest" {
 			t.Errorf("expected message 'Deepest', got %q", entries[0].Message)
+		}
+	})
+
+	t.Run("extracts timestamps from created_at field on chat messages", func(t *testing.T) {
+		input := `[
+			{
+				"uuid": "with-timestamps",
+				"name": "Timeline",
+				"chat_messages": [
+					{
+						"sender": "human",
+						"text": "Question",
+						"created_at": "2025-09-19T04:41:47.942021Z"
+					},
+					{
+						"sender": "assistant",
+						"text": "Answer",
+						"created_at": "2025-09-19T04:41:57.111111Z"
+					}
+				]
+			}
+		]`
+
+		entries, err := ParseConversationsJSON(strings.NewReader(input))
+		if err != nil {
+			t.Fatalf("ParseConversationsJSON returned error: %v", err)
+		}
+
+		if len(entries) != 2 {
+			t.Fatalf("expected 2 entries, got %d", len(entries))
+		}
+
+		if entries[0].MessageTimestamp != "2025-09-19T04:41:47.942021Z" {
+			t.Errorf("expected first timestamp from created_at, got %q", entries[0].MessageTimestamp)
+		}
+
+		if entries[1].MessageTimestamp != "2025-09-19T04:41:57.111111Z" {
+			t.Errorf("expected second timestamp from created_at, got %q", entries[1].MessageTimestamp)
+		}
+	})
+
+	t.Run("parses real export shape and ignores extra metadata fields", func(t *testing.T) {
+		input := `[
+			{
+				"uuid": "79b16c43-8e2e-4cee-8015-d652d0ad6423",
+				"name": "💸 🤖 LLM economics",
+				"summary": "conversation summary",
+				"created_at": "2025-09-19T04:41:47.183913Z",
+				"updated_at": "2025-09-19T18:07:25.357149Z",
+				"account": { "uuid": "af5e398e-a3c4-438d-b2a8-8d68d7a93393" },
+				"chat_messages": [
+					{
+						"uuid": "6b8e26a4-7460-4600-a547-55a24bd9076b",
+						"text": "Please help me calculate some of the funnels...",
+						"content": [
+							{
+								"start_timestamp": "2025-09-19T04:41:47.938540Z",
+								"stop_timestamp": "2025-09-19T04:41:47.938540Z",
+								"type": "text",
+								"text": "Please help me calculate some of the funnels...",
+								"citations": []
+							}
+						],
+						"sender": "human",
+						"created_at": "2025-09-19T04:41:47.942021Z",
+						"updated_at": "2025-09-19T04:41:47.942021Z",
+						"attachments": [],
+						"files": []
+					}
+				]
+			}
+		]`
+
+		entries, err := ParseConversationsJSON(strings.NewReader(input))
+		if err != nil {
+			t.Fatalf("ParseConversationsJSON returned error: %v", err)
+		}
+
+		if len(entries) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(entries))
+		}
+
+		entry := entries[0]
+		if entry.ConversationID != "79b16c43-8e2e-4cee-8015-d652d0ad6423" {
+			t.Errorf("expected conversation id from real export, got %q", entry.ConversationID)
+		}
+		if entry.ConversationName != "💸 🤖 LLM economics" {
+			t.Errorf("expected conversation name from real export, got %q", entry.ConversationName)
+		}
+		if entry.Speaker != "human" {
+			t.Errorf("expected speaker human from real export, got %q", entry.Speaker)
+		}
+		if entry.Message != "Please help me calculate some of the funnels..." {
+			t.Errorf("expected message text field from real export, got %q", entry.Message)
+		}
+		if entry.MessageTimestamp != "2025-09-19T04:41:47.942021Z" {
+			t.Errorf("expected created_at timestamp from real export, got %q", entry.MessageTimestamp)
+		}
+	})
+
+	t.Run("handles null or missing chat_messages gracefully", func(t *testing.T) {
+		input := `[
+			{
+				"uuid": "null-messages",
+				"name": "Null Messages",
+				"chat_messages": null
+			},
+			{
+				"uuid": "valid-conv",
+				"name": "Valid",
+				"chat_messages": [
+					{ "sender": "me", "text": "Hello" }
+				]
+			}
+		]`
+
+		entries, err := ParseConversationsJSON(strings.NewReader(input))
+		if err != nil {
+			t.Fatalf("ParseConversationsJSON returned error: %v", err)
+		}
+
+		if len(entries) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(entries))
+		}
+
+		if entries[0].ConversationID != "valid-conv" {
+			t.Errorf("expected valid conversation to be parsed, got %q", entries[0].ConversationID)
 		}
 	})
 }
