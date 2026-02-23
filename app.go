@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"chat-explorer/models"
@@ -33,12 +32,16 @@ func (a *App) OpenConversationsFile() ([]models.ConversationEntry, error) {
 	}
 
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:           "Open conversations.json",
+		Title:           "Open conversations export (.json or .zip)",
 		DefaultFilename: "conversations.json",
 		Filters: []runtime.FileFilter{
 			{
 				DisplayName: "JSON Files (*.json)",
 				Pattern:     "*.json",
+			},
+			{
+				DisplayName: "ZIP Files (*.zip)",
+				Pattern:     "*.zip",
 			},
 		},
 	})
@@ -54,19 +57,9 @@ func (a *App) OpenConversationsFile() ([]models.ConversationEntry, error) {
 }
 
 func (a *App) LoadConversationsFromPath(path string) ([]models.ConversationEntry, error) {
-	if strings.TrimSpace(path) == "" {
-		return nil, fmt.Errorf("path is required")
-	}
-
-	file, err := os.Open(path)
+	entries, err := models.LoadConversationEntries(path)
 	if err != nil {
-		return nil, fmt.Errorf("open %s: %w", path, err)
-	}
-	defer file.Close()
-
-	entries, err := models.ParseConversationsJSON(file)
-	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
+		return nil, fmt.Errorf("load conversations from %s: %w", path, err)
 	}
 
 	return entries, nil

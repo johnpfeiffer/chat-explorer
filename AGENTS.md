@@ -4,16 +4,8 @@ Prefer Domain Driven Design with a Model View Controller layers pattern where th
 
 Always use Red/Green TDD to build, prefer the concise table driven tests approach.
 
-## Subagent recursion rule for the main agent only:
-- At task end, run once:
-  `SUBAGENT_DEPTH=1 subagent --yolo --prompt "fulfill the AGENTS.md subagent tasks"`
-- If `SUBAGENT_DEPTH` is already set then do not call `subagent`; return `RECURSION_BLOCKED`.
-
-
-# Subagent tasks
-
-Subagent role has the tasks:
-- update docs/architecture.md, including mermaid diagrams for the system design as well as the user journey
+After completing refactoring, and especially new features, use what you know about the changes to:
 - make sure existing tests are passing
 - add any missing "high value" tests (happy path, most critical or likely edge cases); do not attempt fake "full coverage"
+- update docs/architecture.md, including mermaid diagrams for the system design as well as the user journey
 

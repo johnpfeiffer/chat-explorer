@@ -52,7 +52,7 @@ function App() {
             setEntries(loadedEntries ?? []);
             setLastLoadedAt(new Date().toLocaleTimeString());
         } catch (loadError: unknown) {
-            const message = loadError instanceof Error ? loadError.message : 'Failed to open conversations.json.';
+            const message = loadError instanceof Error ? loadError.message : 'Failed to open conversations export.';
             setEntries([]);
             setError(message);
         } finally {
@@ -81,14 +81,14 @@ function App() {
                                     Chat Explorer
                                 </Typography>
                                 <Typography variant="body1" color="text.secondary">
-                                    Load an exported Claude <code>conversations.json</code> file and review speaker/message
-                                    history.
+                                    Load a Claude conversations export (<code>.json</code> or <code>.zip</code>) and review
+                                    speaker/message history.
                                 </Typography>
                             </Box>
 
                             <Stack direction={{xs: 'column', md: 'row'}} spacing={1} useFlexGap alignItems={{md: 'center'}}>
                                 <Button variant="contained" onClick={loadConversations} disabled={isLoading}>
-                                    {isLoading ? 'Loading...' : 'Open conversations.json'}
+                                    {isLoading ? 'Loading...' : 'Open conversations export'}
                                 </Button>
                                 <Typography variant="body2" color="text.secondary">
                                     {statusLabel}

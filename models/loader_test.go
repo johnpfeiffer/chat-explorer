@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"archive/zip"
@@ -8,8 +8,7 @@ import (
 	"testing"
 )
 
-func TestLoadConversationsFromPath(t *testing.T) {
-	app := NewApp()
+func TestLoadConversationEntries(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	tests := []struct {
@@ -21,22 +20,29 @@ func TestLoadConversationsFromPath(t *testing.T) {
 		wantErr     string
 	}{
 		{
-			name:        "loads direct conversations json file",
+			name:        "loads direct json export",
 			path:        writeJSONFixture(t, tmpDir, "conversations.json", sampleConversationsJSON),
 			wantLen:     1,
 			wantSpeaker: "assistant",
 			wantMessage: "Hello from export.",
 		},
 		{
-			name:        "loads conversations json from zip archive",
+			name:        "loads zip export with conversations json",
 			path:        writeZipFixture(t, tmpDir, "export.zip", map[string]string{"conversations.json": sampleConversationsJSON}),
 			wantLen:     1,
 			wantSpeaker: "assistant",
 			wantMessage: "Hello from export.",
 		},
 		{
-			name:    "returns error when zip missing conversations json",
-			path:    writeZipFixture(t, tmpDir, "missing-conversations.zip", map[string]string{"memories.json": `{"ignored": true}`}),
+			name:        "loads zip export with conversations json nested in folder",
+			path:        writeZipFixture(t, tmpDir, "nested-export.zip", map[string]string{"data/conversations.json": sampleConversationsJSON}),
+			wantLen:     1,
+			wantSpeaker: "assistant",
+			wantMessage: "Hello from export.",
+		},
+		{
+			name:    "returns error when zip has no conversations json",
+			path:    writeZipFixture(t, tmpDir, "missing-conversations.zip", map[string]string{"projects.json": `[]`}),
 			wantErr: "conversations.json not found",
 		},
 		{
@@ -45,15 +51,15 @@ func TestLoadConversationsFromPath(t *testing.T) {
 			wantErr: "path is required",
 		},
 		{
-			name:    "returns error when file is missing",
-			path:    filepath.Join(tmpDir, "missing.json"),
-			wantErr: "no such file or directory",
+			name:    "returns error for invalid zip file",
+			path:    writeJSONFixture(t, tmpDir, "broken.zip", "{not a zip}"),
+			wantErr: "open zip archive",
 		},
 	}
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			entries, err := app.LoadConversationsFromPath(testCase.path)
+			entries, err := LoadConversationEntries(testCase.path)
 			if testCase.wantErr != "" {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", testCase.wantErr)
@@ -65,7 +71,7 @@ func TestLoadConversationsFromPath(t *testing.T) {
 			}
 
 			if err != nil {
-				t.Fatalf("LoadConversationsFromPath returned error: %v", err)
+				t.Fatalf("LoadConversationEntries returned error: %v", err)
 			}
 
 			if len(entries) != testCase.wantLen {
@@ -87,14 +93,14 @@ func TestLoadConversationsFromPath(t *testing.T) {
 }
 
 const sampleConversationsJSON = `[
-		{
-			"uuid": "conv-1",
-			"name": "Example",
-			"chat_messages": [
-				{ "sender": "assistant", "text": "Hello from export." }
-			]
-		}
-	]`
+	{
+		"uuid": "conv-1",
+		"name": "Example",
+		"chat_messages": [
+			{ "sender": "assistant", "text": "Hello from export." }
+		]
+	}
+]`
 
 func writeJSONFixture(t *testing.T, dir string, fileName string, content string) string {
 	t.Helper()

@@ -55,7 +55,7 @@ describe('App happy path', () => {
 
         render(<App />);
 
-        fireEvent.click(screen.getByRole('button', {name: 'Open conversations.json'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Open conversations export'}));
 
         await waitFor(() => {
             expect(mockedOpenConversationsFile).toHaveBeenCalledTimes(1);
@@ -106,7 +106,7 @@ describe('App happy path', () => {
         ]);
 
         render(<App />);
-        fireEvent.click(screen.getByRole('button', {name: 'Open conversations.json'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Open conversations export'}));
 
         await waitFor(() => {
             expect(screen.getAllByTestId('conversation-title').length).toBe(2);
@@ -127,7 +127,7 @@ describe('App happy path', () => {
 
         render(<App />);
 
-        fireEvent.click(screen.getByRole('button', {name: 'Open conversations.json'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Open conversations export'}));
 
         await waitFor(() => {
             expect(mockedOpenConversationsFile).toHaveBeenCalledTimes(1);
@@ -150,7 +150,7 @@ describe('App happy path', () => {
 
         render(<App />);
 
-        const button = screen.getByRole('button', {name: 'Open conversations.json'}) as HTMLButtonElement;
+        const button = screen.getByRole('button', {name: 'Open conversations export'}) as HTMLButtonElement;
         fireEvent.click(button);
 
         expect(button.disabled).toBe(true);
@@ -170,7 +170,7 @@ describe('App happy path', () => {
             expect(button.disabled).toBe(false);
         });
         
-        expect(button.textContent).toBe('Open conversations.json');
+        expect(button.textContent).toBe('Open conversations export');
         expect(screen.getByText(/Last load:/)).toBeTruthy();
     });
 });
