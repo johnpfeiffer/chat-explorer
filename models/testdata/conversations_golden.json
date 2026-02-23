@@ -1,0 +1,64 @@
+[
+  {
+    "uuid": "conv-1",
+    "name": "Setup",
+    "chat_messages": [
+      {
+        "sender": "human",
+        "text": "How do I export data?",
+        "created_at": "2026-01-02T03:04:05Z"
+      }
+    ]
+  },
+  {
+    "uuid": "conv-2",
+    "name": "Setup",
+    "chat_messages": [
+      {
+        "sender": "assistant",
+        "text": "Open Settings and click Export data.",
+        "created_at": "2026-01-02T03:04:30Z"
+      }
+    ]
+  },
+  {
+    "uuid": "conv-3",
+    "name": "Multiline",
+    "chat_messages": [
+      {
+        "sender": "assistant",
+        "content": [
+          {
+            "text": "Line one"
+          },
+          {
+            "text": "Line two"
+          }
+        ],
+        "created_at": "2026-01-02T03:05:00Z"
+      }
+    ]
+  },
+  {
+    "uuid": "conv-4",
+    "name": "International",
+    "chat_messages": [
+      {
+        "sender": "研究者🧪",
+        "text": "¡Hola! Привет こんにちは 👋",
+        "created_at": "2026-01-02T03:05:30Z"
+      }
+    ]
+  },
+  {
+    "uuid": "conv-5",
+    "name": "",
+    "chat_messages": [
+      {
+        "sender": "",
+        "text": "Fallback speaker + untitled name",
+        "created_at": "2026-01-02T03:06:00Z"
+      }
+    ]
+  }
+]
