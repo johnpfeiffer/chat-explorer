@@ -145,4 +145,31 @@ describe('ConversationList', () => {
         expect(assistantChip).toBeTruthy();
         expect(assistantChip?.className).toContain('MuiChip-colorSuccess');
     });
+
+    it('treats chatgpt user role chip as warning color', () => {
+        const chatGPTConversation: ConversationThread[] = [
+            {
+                conversationId: 'conv-chatgpt',
+                conversationName: 'ChatGPT Conversation',
+                messages: [
+                    {
+                        conversationId: 'conv-chatgpt',
+                        conversationName: 'ChatGPT Conversation',
+                        speaker: 'user',
+                        message: 'ChatGPT user message',
+                        messageTimestamp: '2025-09-19T04:41:47.942021Z'
+                    }
+                ]
+            }
+        ];
+
+        render(<ConversationList conversations={chatGPTConversation} />);
+
+        const header = screen.getByRole('button', {name: /ChatGPT Conversation/i});
+        fireEvent.click(header);
+
+        const userChip = screen.getByText('user').closest('.MuiChip-root');
+        expect(userChip).toBeTruthy();
+        expect(userChip?.className).toContain('MuiChip-colorWarning');
+    });
 });

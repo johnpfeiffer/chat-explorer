@@ -6,10 +6,16 @@ The current MVP supports loading conversations from either:
 - a direct `conversations.json` file, or
 - a `.zip` export that contains `conversations.json`.
 
-`memories.json` and `projects.json` are currently ignored by design for v3 MVP.
+The parser supports both known `conversations.json` schemas:
+- Claude export format (`uuid`, `name`, `chat_messages`)
+- ChatGPT export format (`conversation_id`, `title`, `mapping`, `current_node`)
+
+`memories.json` and `projects.json` are ignored by design for the current scope.
 
 ## Authoritative Export Contract
-The parser contract is anchored to the real export sample provided by the user (conversation UUID `79b16c43-8e2e-4cee-8015-d652d0ad6423`).
+The parser contract is anchored to real examples under `docs/`:
+- Claude style sample (`docs/requirements-v3.md` + fixtures in `models/testdata/`)
+- ChatGPT style sample (`docs/chatgpt-conversations.json`, `docs/requirements-v4.md`)
 
 ### Archive-level fields observed
 - zip entries may include:
@@ -18,16 +24,39 @@ The parser contract is anchored to the real export sample provided by the user (
   - `projects.json` (ignored for now)
 
 ### Conversation-level fields observed
+#### Claude format
 - `uuid` (used as `ConversationID`)
 - `name` (used as `ConversationName`)
 - `chat_messages` (iterated)
 - `summary`, `created_at`, `updated_at`, `account` (currently ignored by parser)
 
+#### ChatGPT format
+- `conversation_id` (used as `ConversationID`)
+- `title` (used as `ConversationName`)
+- `current_node` (used to pick the active branch)
+- `mapping` (message tree keyed by node id)
+- `create_time` / `update_time` (Unix seconds, used for timestamp fallback)
+
 ### Message-level fields observed
+#### Claude format
 - `sender` (used as `Speaker`, fallback to `"unknown"` when empty)
 - `text` and `content` (used to compute `Message`; `text` takes precedence)
 - `created_at` (used as `MessageTimestamp`)
 - `updated_at`, `attachments`, `files`, `uuid` (currently ignored by parser)
+
+#### ChatGPT format
+- `message.author.role` (used as `Speaker`, fallback to `"unknown"`)
+- `message.content.parts` (joined into `Message`, fallback to `message.content.text`)
+- `message.create_time` (Unix seconds converted to ISO-8601 UTC)
+- `message.metadata.is_visually_hidden_from_conversation` (hidden messages filtered out)
+- `message.channel`, `message.author.name`, tool metadata (currently informational only)
+
+### Normalization rules
+- Parser detects format per conversation object by presence of `mapping`.
+- ChatGPT traversal follows the `current_node` ancestry path (active branch); if unavailable, traversal falls back to root-based graph walk.
+- Empty/blank messages are skipped.
+- Hidden ChatGPT messages are skipped.
+- ChatGPT timestamp fallback order: message `create_time` -> ancestor `create_time` -> conversation `create_time` -> conversation `update_time`.
 
 ### Output contract sent to frontend
 - `conversationId`
@@ -53,6 +82,10 @@ graph TD
         AppGo["app.go"]
         Loader["models/loader.go"]
         Parser["models/parser.go"]
+        Detector["Format Detector"]
+        ClaudeNorm["Claude Normalizer"]
+        ChatGPTNorm["ChatGPT Normalizer"]
+        EntryModel["ConversationEntry"]
         Runtime["Wails Runtime"]
     end
 
@@ -65,6 +98,11 @@ graph TD
     AppGo -->|Uses| Runtime
     AppGo -->|Delegates file parsing| Loader
     Loader -->|Uses| Parser
+    Parser --> Detector
+    Detector -->|chat_messages| ClaudeNorm
+    Detector -->|mapping| ChatGPTNorm
+    ClaudeNorm --> EntryModel
+    ChatGPTNorm --> EntryModel
 ```
 
 ## Backend (Go)
@@ -74,7 +112,7 @@ The backend is responsible for:
 2. **Native integration**: `app.go` exposes methods to open the native file picker and load selected export paths.
 3. **Domain data processing** (`models/`):
    - `models/loader.go`: chooses ingestion strategy (`.zip` vs non-zip), locates `conversations.json` within archives, and delegates JSON parsing.
-   - `models/parser.go`: flattens conversation/message structures into normalized `ConversationEntry` rows.
+   - `models/parser.go`: detects export format and normalizes Claude/ChatGPT conversations into `ConversationEntry` rows.
 
 ### Key Components
 - **`App` struct** (`app.go`):
@@ -84,6 +122,10 @@ The backend is responsible for:
   - Validates input path.
   - Reads a zip archive when extension is `.zip` and extracts `conversations.json`.
   - Otherwise parses the target file as JSON export input.
+- **`ParseConversationsJSON(reader)`** (`models/parser.go`):
+  - Decodes top-level array.
+  - Detects format per record (`mapping` vs non-`mapping`).
+  - Applies format-specific normalization and filtering.
 - **`ConversationEntry` struct** (`models/parser.go`):
   - `ConversationID`
   - `ConversationName`
@@ -119,6 +161,9 @@ sequenceDiagram
     participant Runtime as "Wails Runtime"
     participant Loader as "Loader (Models)"
     participant Parser as "Parser (Models)"
+    participant Detect as "Format Detector"
+    participant Claude as "Claude Normalizer"
+    participant ChatGPT as "ChatGPT Normalizer"
     participant FS as "File System"
 
     User->>UI: Click "Open conversations export"
@@ -140,8 +185,15 @@ sequenceDiagram
             Loader->>FS: os.Open(path)
             Loader->>Parser: ParseConversationsJSON(file reader)
         end
-        loop For each conversation/message
-            Parser->>Parser: Normalize to ConversationEntry
+        loop For each conversation object
+            Parser->>Detect: Inspect fields
+            alt Claude shape (chat_messages)
+                Detect->>Claude: Normalize chat_messages
+                Claude-->>Parser: []ConversationEntry
+            else ChatGPT shape (mapping)
+                Detect->>ChatGPT: Traverse active branch + filter hidden
+                ChatGPT-->>Parser: []ConversationEntry
+            end
         end
         Parser-->>Loader: []ConversationEntry
         Loader-->>Backend: []ConversationEntry

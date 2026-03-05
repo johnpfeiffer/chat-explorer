@@ -21,7 +21,7 @@ function getSpeakerChipColor(speaker: string): 'default' | 'success' | 'warning'
     if (normalizedSpeaker === 'assistant') {
         return 'success';
     }
-    if (normalizedSpeaker === 'human') {
+    if (normalizedSpeaker === 'human' || normalizedSpeaker === 'user') {
         return 'warning';
     }
     return 'default';

@@ -63,6 +63,43 @@ func expectedGoldenEntries() []ConversationEntry {
 	}
 }
 
+func sampleChatGPTConversationsJSON() string {
+	return `[
+		{
+			"title": "ChatGPT Export",
+			"create_time": 1700000400,
+			"conversation_id": "cgpt-loader-1",
+			"current_node": "msg-user",
+			"mapping": {
+				"root": {"id": "root", "message": null, "parent": null, "children": ["msg-user"]},
+				"msg-user": {
+					"id": "msg-user",
+					"parent": "root",
+					"children": [],
+					"message": {
+						"author": {"role": "user"},
+						"create_time": 1700000401,
+						"content": {"content_type": "text", "parts": ["hello from chatgpt export"]},
+						"metadata": {}
+					}
+				}
+			}
+		}
+	]`
+}
+
+func expectedSampleChatGPTEntries() []ConversationEntry {
+	return []ConversationEntry{
+		entry(
+			"cgpt-loader-1",
+			"ChatGPT Export",
+			"user",
+			"hello from chatgpt export",
+			"2023-11-14T22:20:01Z",
+		),
+	}
+}
+
 func entry(
 	conversationID string,
 	conversationName string,

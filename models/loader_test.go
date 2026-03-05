@@ -10,6 +10,8 @@ func TestLoadConversationEntries(t *testing.T) {
 	tmpDir := t.TempDir()
 	goldenConversationsJSON := loadGoldenConversationsJSON(t)
 	goldenEntries := expectedGoldenEntries()
+	chatGPTConversationsJSON := sampleChatGPTConversationsJSON()
+	chatGPTEntries := expectedSampleChatGPTEntries()
 
 	tests := []struct {
 		name            string
@@ -31,6 +33,16 @@ func TestLoadConversationEntries(t *testing.T) {
 			name:        "loads zip export with conversations json nested in folder",
 			path:        writeZipFixture(t, tmpDir, "nested-export.zip", map[string]string{"data/conversations.json": goldenConversationsJSON}),
 			wantEntries: goldenEntries,
+		},
+		{
+			name:        "loads direct chatgpt conversations json export",
+			path:        writeJSONFixture(t, tmpDir, "chatgpt-conversations.json", chatGPTConversationsJSON),
+			wantEntries: chatGPTEntries,
+		},
+		{
+			name:        "loads chatgpt conversations json from zip export",
+			path:        writeZipFixture(t, tmpDir, "chatgpt-export.zip", map[string]string{"conversations.json": chatGPTConversationsJSON}),
+			wantEntries: chatGPTEntries,
 		},
 		{
 			name:            "returns error when zip has no conversations json",

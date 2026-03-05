@@ -35,6 +35,20 @@ func TestLoadConversationsFromPath(t *testing.T) {
 			wantMessage: "Hello from export.",
 		},
 		{
+			name:        "loads direct chatgpt conversations json file",
+			path:        writeJSONFixture(t, tmpDir, "chatgpt-conversations.json", sampleChatGPTConversationsJSON),
+			wantLen:     1,
+			wantSpeaker: "user",
+			wantMessage: "Hello from chatgpt export.",
+		},
+		{
+			name:        "loads chatgpt conversations json from zip archive",
+			path:        writeZipFixture(t, tmpDir, "chatgpt-export.zip", map[string]string{"conversations.json": sampleChatGPTConversationsJSON}),
+			wantLen:     1,
+			wantSpeaker: "user",
+			wantMessage: "Hello from chatgpt export.",
+		},
+		{
 			name:    "returns error when zip missing conversations json",
 			path:    writeZipFixture(t, tmpDir, "missing-conversations.zip", map[string]string{"memories.json": `{"ignored": true}`}),
 			wantErr: "conversations.json not found",
@@ -93,6 +107,29 @@ const sampleConversationsJSON = `[
 			"chat_messages": [
 				{ "sender": "assistant", "text": "Hello from export." }
 			]
+		}
+	]`
+
+const sampleChatGPTConversationsJSON = `[
+		{
+			"title": "ChatGPT Example",
+			"create_time": 1700000500,
+			"conversation_id": "cgpt-app-1",
+			"current_node": "node-user",
+			"mapping": {
+				"root": {"id": "root", "message": null, "parent": null, "children": ["node-user"]},
+				"node-user": {
+					"id": "node-user",
+					"parent": "root",
+					"children": [],
+					"message": {
+						"author": {"role": "user"},
+						"create_time": 1700000501,
+						"content": {"content_type": "text", "parts": ["Hello from chatgpt export."]},
+						"metadata": {}
+					}
+				}
+			}
 		}
 	]`
 
