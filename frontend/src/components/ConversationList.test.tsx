@@ -1,9 +1,17 @@
 import React from 'react';
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
-import {afterEach, describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 
 import {ConversationList} from './ConversationList';
 import type {ConversationThread} from '../models/conversations';
+
+const {formatMessageTimestampMock} = vi.hoisted(() => ({
+    formatMessageTimestampMock: vi.fn((timestamp: string | undefined) => timestamp ?? 'Unknown time')
+}));
+
+vi.mock('../utils/timestamps', () => ({
+    formatMessageTimestamp: formatMessageTimestampMock
+}));
 
 const mockConversations: ConversationThread[] = [
     {
@@ -37,6 +45,7 @@ const mockConversations: ConversationThread[] = [
 describe('ConversationList', () => {
     afterEach(() => {
         cleanup();
+        formatMessageTimestampMock.mockClear();
     });
 
     it('renders a list of conversations collapsed by default', () => {
@@ -171,5 +180,22 @@ describe('ConversationList', () => {
         const userChip = screen.getByText('user').closest('.MuiChip-root');
         expect(userChip).toBeTruthy();
         expect(userChip?.className).toContain('MuiChip-colorWarning');
+    });
+
+    it('does not reformat timestamps for an already-expanded conversation when toggling another conversation', () => {
+        render(<ConversationList conversations={mockConversations} />);
+
+        const firstHeader = screen.getByRole('button', {name: /First Conversation/i});
+        const secondHeader = screen.getByRole('button', {name: /Second Conversation/i});
+        const firstTimestamp = '2025-09-19T04:41:47.942021Z';
+        const secondTimestamp = '2025-09-19T04:42:47.942021Z';
+
+        fireEvent.click(firstHeader);
+        formatMessageTimestampMock.mockClear();
+
+        fireEvent.click(secondHeader);
+        const callArguments = formatMessageTimestampMock.mock.calls.map(([timestamp]) => timestamp);
+        expect(callArguments).toContain(secondTimestamp);
+        expect(callArguments).not.toContain(firstTimestamp);
     });
 });

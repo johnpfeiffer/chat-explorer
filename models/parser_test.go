@@ -333,7 +333,7 @@ func TestParseConversationsJSON(t *testing.T) {
 		{
 			name: "falls back to chatgpt content text when parts are absent",
 			input: `[
-				{
+					{
 					"title": "Content Text Fallback",
 					"create_time": 1700000700,
 					"conversation_id": "cgpt-6",
@@ -356,6 +356,62 @@ func TestParseConversationsJSON(t *testing.T) {
 			]`,
 			wantEntries: []ConversationEntry{
 				entry("cgpt-6", "Content Text Fallback", "assistant", "{\"tool\":\"web.run\"}", "2023-11-14T22:25:01Z"),
+			},
+		},
+		{
+			name: "preserves utf8 chatgpt conversation title and parts message text",
+			input: `[
+					{
+						"title": "Café 日本語 🎷",
+						"create_time": 1700000800,
+						"conversation_id": "cgpt-utf8-1",
+						"current_node": "msg1",
+						"mapping": {
+							"root": {"id": "root", "message": null, "parent": null, "children": ["msg1"]},
+							"msg1": {
+								"id": "msg1",
+								"parent": "root",
+								"children": [],
+								"message": {
+									"author": {"role": "assistant"},
+									"create_time": 1700000801,
+									"content": {"content_type": "text", "parts": ["¡Hola! Привет こんにちは 👋"]},
+									"metadata": {}
+								}
+							}
+						}
+					}
+				]`,
+			wantEntries: []ConversationEntry{
+				entry("cgpt-utf8-1", "Café 日本語 🎷", "assistant", "¡Hola! Привет こんにちは 👋", "2023-11-14T22:26:41Z"),
+			},
+		},
+		{
+			name: "preserves utf8 chatgpt content text fallback",
+			input: `[
+					{
+						"title": "Fallback UTF-8",
+						"create_time": 1700000900,
+						"conversation_id": "cgpt-utf8-2",
+						"current_node": "msg1",
+						"mapping": {
+							"root": {"id": "root", "message": null, "parent": null, "children": ["msg1"]},
+							"msg1": {
+								"id": "msg1",
+								"parent": "root",
+								"children": [],
+								"message": {
+									"author": {"role": "assistant"},
+									"create_time": 1700000901,
+									"content": {"content_type": "code", "text": "🧪 Δοκιμή 東京 — résumé"},
+									"metadata": {}
+								}
+							}
+						}
+					}
+				]`,
+			wantEntries: []ConversationEntry{
+				entry("cgpt-utf8-2", "Fallback UTF-8", "assistant", "🧪 Δοκιμή 東京 — résumé", "2023-11-14T22:28:21Z"),
 			},
 		},
 	}

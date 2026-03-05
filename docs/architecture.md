@@ -74,6 +74,7 @@ graph TD
         Bindings["Wails JS Bindings"]
         Logic["models/conversations.ts"]
         CompList["components/ConversationList.tsx"]
+        CompPanel["Memoized ConversationPanel"]
         Utils["utils/timestamps.ts"]
     end
 
@@ -92,7 +93,8 @@ graph TD
     AppC -->|Calls| Bindings
     AppC -->|Uses| Logic
     AppC -->|Renders| CompList
-    CompList -->|Uses| Utils
+    CompList -->|Renders| CompPanel
+    CompPanel -->|Uses| Utils
     Bindings <-->|IPC| Runtime
     Main -->|Initializes| AppGo
     AppGo -->|Uses| Runtime
@@ -147,8 +149,11 @@ The frontend is an SPA served by Wails.
 ### Key Components
 - `App.tsx`: manages loading state and requests export data via `OpenConversationsFile()`.
 - `models/conversations.ts`: groups flat entries into conversation threads.
-- `components/ConversationList.tsx`: renders expandable threads/messages.
+- `components/ConversationList.tsx`: renders thread summaries and delegates each thread to a memoized panel component so toggling one thread does not re-render all expanded threads.
 - `utils/timestamps.ts`: formats timestamps into local display format.
+
+### Frontend Performance Note
+- Conversation expansion state is stored in `ConversationList`, but each thread panel is memoized and receives a stable `onToggle` callback. This keeps timestamp formatting and message re-rendering scoped to the panel being toggled.
 
 ## User Journey (Data Flow)
 
@@ -157,6 +162,7 @@ sequenceDiagram
     actor User
     participant UI as "App.tsx"
     participant List as "ConversationList"
+    participant Panel as "Memoized ConversationPanel"
     participant Backend as "Backend (App)"
     participant Runtime as "Wails Runtime"
     participant Loader as "Loader (Models)"
@@ -164,6 +170,7 @@ sequenceDiagram
     participant Detect as "Format Detector"
     participant Claude as "Claude Normalizer"
     participant ChatGPT as "ChatGPT Normalizer"
+    participant Utils as "Timestamp Formatter"
     participant FS as "File System"
 
     User->>UI: Click "Open conversations export"
@@ -202,6 +209,9 @@ sequenceDiagram
 
     UI->>UI: Group entries (by ID/name)
     UI->>List: Render(conversations)
-    List->>List: Format message timestamps
-    List-->>User: Display conversation threads
+    List->>Panel: Render per-conversation panel
+    Panel->>Panel: Toggle only selected panel state
+    Panel->>Panel: Mount/unmount selected thread messages
+    Panel->>Utils: Format selected thread message timestamps
+    Panel-->>User: Display expanded/collapsed conversation
 ```
