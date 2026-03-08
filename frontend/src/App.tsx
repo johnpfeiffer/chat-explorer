@@ -81,7 +81,7 @@ function App() {
                                     Chat Explorer
                                 </Typography>
                                 <Typography variant="body1" color="text.secondary">
-                                    Load a Claude conversations export (<code>.json</code> or <code>.zip</code>) and review
+                                    Load a Claude or ChatGPT conversations export (<code>.json</code> or <code>.zip</code>) and review
                                     speaker/message history.
                                 </Typography>
                             </Box>
