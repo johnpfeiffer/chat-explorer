@@ -108,11 +108,30 @@ func entry(
 	messageTimestamp string,
 ) ConversationEntry {
 	return ConversationEntry{
-		ConversationID:   conversationID,
-		ConversationName: conversationName,
-		Speaker:          speaker,
-		Message:          message,
-		MessageTimestamp: messageTimestamp,
+		ConversationID:        conversationID,
+		ConversationName:      conversationName,
+		ConversationCreatedAt: "",
+		Speaker:               speaker,
+		Message:               message,
+		MessageTimestamp:      messageTimestamp,
+	}
+}
+
+func entryWithCreatedAt(
+	conversationID string,
+	conversationName string,
+	conversationCreatedAt string,
+	speaker string,
+	message string,
+	messageTimestamp string,
+) ConversationEntry {
+	return ConversationEntry{
+		ConversationID:        conversationID,
+		ConversationName:      conversationName,
+		ConversationCreatedAt: conversationCreatedAt,
+		Speaker:               speaker,
+		Message:               message,
+		MessageTimestamp:      messageTimestamp,
 	}
 }
 
@@ -124,7 +143,13 @@ func assertConversationEntries(t *testing.T, got []ConversationEntry, want []Con
 	}
 
 	for index := range want {
-		if got[index] != want[index] {
+		gotEntry := got[index]
+		wantEntry := want[index]
+		if wantEntry.ConversationCreatedAt == "" {
+			gotEntry.ConversationCreatedAt = ""
+		}
+
+		if gotEntry != wantEntry {
 			t.Fatalf("entry %d mismatch\nwant: %+v\ngot:  %+v", index, want[index], got[index])
 		}
 	}

@@ -96,6 +96,57 @@ func TestParseConversationsJSON(t *testing.T) {
 			},
 		},
 		{
+			name: "uses conversation created_at for claude conversation created timestamp",
+			input: `[
+				{
+					"uuid": "claude-created",
+					"name": "Timeline",
+					"created_at": "2026-01-01T12:00:00Z",
+					"chat_messages": [
+						{
+							"sender": "human",
+							"text": "Question",
+							"created_at": "2026-01-02T10:00:00Z"
+						},
+						{
+							"sender": "assistant",
+							"text": "Answer",
+							"created_at": "2026-01-02T10:00:42Z"
+						}
+					]
+				}
+			]`,
+			wantEntries: []ConversationEntry{
+				entryWithCreatedAt("claude-created", "Timeline", "2026-01-01T12:00:00Z", "human", "Question", "2026-01-02T10:00:00Z"),
+				entryWithCreatedAt("claude-created", "Timeline", "2026-01-01T12:00:00Z", "assistant", "Answer", "2026-01-02T10:00:42Z"),
+			},
+		},
+		{
+			name: "falls back to oldest message created_at for claude conversation created timestamp",
+			input: `[
+				{
+					"uuid": "claude-fallback-created",
+					"name": "Timeline",
+					"chat_messages": [
+						{
+							"sender": "assistant",
+							"text": "Answer",
+							"created_at": "2026-01-02T10:00:42Z"
+						},
+						{
+							"sender": "human",
+							"text": "Question",
+							"created_at": "2026-01-02T10:00:00Z"
+						}
+					]
+				}
+			]`,
+			wantEntries: []ConversationEntry{
+				entryWithCreatedAt("claude-fallback-created", "Timeline", "2026-01-02T10:00:00Z", "assistant", "Answer", "2026-01-02T10:00:42Z"),
+				entryWithCreatedAt("claude-fallback-created", "Timeline", "2026-01-02T10:00:00Z", "human", "Question", "2026-01-02T10:00:00Z"),
+			},
+		},
+		{
 			name: "handles null chat_messages while parsing valid conversations",
 			input: `[
 				{
@@ -183,6 +234,116 @@ func TestParseConversationsJSON(t *testing.T) {
 				entry("cgpt-1", "ChatGPT One", "user", "Hello from user", "2023-11-14T22:13:21Z"),
 				entry("cgpt-1", "ChatGPT One", "assistant", "Hello from assistant", "2023-11-14T22:13:22Z"),
 				entry("cgpt-1", "ChatGPT One", "tool", "tool output", "2023-11-14T22:13:23Z"),
+			},
+		},
+		{
+			name: "uses chatgpt create_time for conversation created timestamp",
+			input: `[
+				{
+					"title": "ChatGPT Created",
+					"create_time": 1700001000,
+					"conversation_id": "cgpt-created",
+					"current_node": "a1",
+					"mapping": {
+						"root": {
+							"id": "root",
+							"message": null,
+							"parent": null,
+							"children": ["a1"]
+						},
+						"a1": {
+							"id": "a1",
+							"parent": "root",
+							"children": [],
+							"message": {
+								"author": {"role": "assistant"},
+								"create_time": 1700001001,
+								"content": {"content_type": "text", "parts": ["answer"]},
+								"metadata": {}
+							}
+						}
+					}
+				}
+			]`,
+			wantEntries: []ConversationEntry{
+				entryWithCreatedAt("cgpt-created", "ChatGPT Created", "2023-11-14T22:30:00Z", "assistant", "answer", "2023-11-14T22:30:01Z"),
+			},
+		},
+		{
+			name: "falls back to oldest message timestamp when chatgpt create_time is missing",
+			input: `[
+				{
+					"title": "ChatGPT Missing Created",
+					"conversation_id": "cgpt-fallback-created",
+					"current_node": "a2",
+					"mapping": {
+						"root": {
+							"id": "root",
+							"message": null,
+							"parent": null,
+							"children": ["a1"]
+						},
+						"a1": {
+							"id": "a1",
+							"parent": "root",
+							"children": ["a2"],
+							"message": {
+								"author": {"role": "user"},
+								"create_time": 1700002000,
+								"content": {"content_type": "text", "parts": ["question"]},
+								"metadata": {}
+							}
+						},
+						"a2": {
+							"id": "a2",
+							"parent": "a1",
+							"children": [],
+							"message": {
+								"author": {"role": "assistant"},
+								"create_time": 1700002002,
+								"content": {"content_type": "text", "parts": ["answer"]},
+								"metadata": {}
+							}
+						}
+					}
+				}
+			]`,
+			wantEntries: []ConversationEntry{
+				entryWithCreatedAt("cgpt-fallback-created", "ChatGPT Missing Created", "2023-11-14T22:46:40Z", "user", "question", "2023-11-14T22:46:40Z"),
+				entryWithCreatedAt("cgpt-fallback-created", "ChatGPT Missing Created", "2023-11-14T22:46:40Z", "assistant", "answer", "2023-11-14T22:46:42Z"),
+			},
+		},
+		{
+			name: "falls back to graph traversal when current node self references and has no visible message",
+			input: `[
+				{
+					"title": "Self Ref Root",
+					"create_time": 1700003000,
+					"conversation_id": "cgpt-self-ref",
+					"current_node": "d4576e7e-3285-4fc4-a039-e17d9ebcb6a6",
+					"mapping": {
+						"d4576e7e-3285-4fc4-a039-e17d9ebcb6a6": {
+							"id": "d4576e7e-3285-4fc4-a039-e17d9ebcb6a6",
+							"message": null,
+							"parent": "d4576e7e-3285-4fc4-a039-e17d9ebcb6a6",
+							"children": ["leaf-user"]
+						},
+						"leaf-user": {
+							"id": "leaf-user",
+							"parent": "d4576e7e-3285-4fc4-a039-e17d9ebcb6a6",
+							"children": [],
+							"message": {
+								"author": {"role": "user"},
+								"create_time": 1700003001,
+								"content": {"content_type": "text", "parts": ["older export message"]},
+								"metadata": {}
+							}
+						}
+					}
+				}
+			]`,
+			wantEntries: []ConversationEntry{
+				entryWithCreatedAt("cgpt-self-ref", "Self Ref Root", "2023-11-14T23:03:20Z", "user", "older export message", "2023-11-14T23:03:21Z"),
 			},
 		},
 		{

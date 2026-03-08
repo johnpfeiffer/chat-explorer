@@ -10,10 +10,11 @@ import {
 } from '@mui/material';
 
 import type {ConversationThread} from '../models/conversations';
-import {formatMessageTimestamp} from '../utils/timestamps';
+import {formatConversationTimestamp, formatMessageTimestamp} from '../utils/timestamps';
 
 type ConversationListProps = {
     conversations: ConversationThread[];
+    conversationSetVersion: number;
 };
 
 type ConversationPanelProps = {
@@ -35,11 +36,11 @@ function getSpeakerChipColor(speaker: string): 'default' | 'success' | 'warning'
     return 'default';
 }
 
-function buildPanelKey(conversationID: string, conversationName: string, conversationIndex: number): string {
+function buildPanelKey(conversationID: string, conversationRawName: string): string {
     if (conversationID !== '') {
         return `id:${conversationID}`;
     }
-    return `name:${conversationName}:${conversationIndex}`;
+    return `name:${conversationRawName}`;
 }
 
 const ConversationPanel = React.memo(function ConversationPanel({
@@ -95,6 +96,9 @@ const ConversationPanel = React.memo(function ConversationPanel({
                             {conversation.conversationId}
                         </Typography>
                     )}
+                    <Typography variant="caption" color="text.secondary">
+                        ({formatConversationTimestamp(conversation.conversationCreatedAt)})
+                    </Typography>
                 </Stack>
             </AccordionSummary>
             <AccordionDetails>
@@ -129,12 +133,12 @@ const ConversationPanel = React.memo(function ConversationPanel({
     );
 });
 
-export function ConversationList({conversations}: ConversationListProps) {
+export function ConversationList({conversations, conversationSetVersion}: ConversationListProps) {
     const [expandedConversationPanels, setExpandedConversationPanels] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         setExpandedConversationPanels({});
-    }, [conversations]);
+    }, [conversationSetVersion]);
 
     const handleConversationToggle = useCallback((panelKey: string, isExpanded: boolean): void => {
         setExpandedConversationPanels((previousPanels) => ({
@@ -148,14 +152,13 @@ export function ConversationList({conversations}: ConversationListProps) {
             {conversations.map((conversation, conversationIndex) => {
                 const panelKey = buildPanelKey(
                     conversation.conversationId,
-                    conversation.conversationName,
-                    conversationIndex
+                    conversation.conversationRawName
                 );
                 const isExpanded = expandedConversationPanels[panelKey] ?? false;
 
                 return (
                     <ConversationPanel
-                        key={`${conversation.conversationId}-${conversationIndex}`}
+                        key={panelKey}
                         conversation={conversation}
                         conversationIndex={conversationIndex}
                         panelKey={panelKey}

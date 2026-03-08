@@ -6,6 +6,15 @@ The current MVP supports loading conversations from either:
 - a direct `conversations.json` file, or
 - a `.zip` export that contains `conversations.json`.
 
+After import, the frontend groups message rows into conversation threads and supports a user-controlled sort cycle:
+- `Sorted by Created (oldest)` (default)
+- `Sorted by Created (newest)`
+- `Sorted by Name (A-Z)`
+- `Sorted by Name (Z-A)`
+
+Each conversation row also displays a formatted conversation created date:
+- `(YYYY-MM-DD HH:MM Timezone)`
+
 The parser supports both known `conversations.json` schemas:
 - Claude export format (`uuid`, `name`, `chat_messages`)
 - ChatGPT export format (`conversation_id`, `title`, `mapping`, `current_node`)
@@ -28,14 +37,16 @@ The parser contract is anchored to real examples under `docs/`:
 - `uuid` (used as `ConversationID`)
 - `name` (used as `ConversationName`)
 - `chat_messages` (iterated)
-- `summary`, `created_at`, `updated_at`, `account` (currently ignored by parser)
+- `created_at` (used as conversation-level created timestamp when available)
+- `summary`, `updated_at`, `account` (currently ignored by parser)
 
 #### ChatGPT format
 - `conversation_id` (used as `ConversationID`)
 - `title` (used as `ConversationName`)
 - `current_node` (used to pick the active branch)
 - `mapping` (message tree keyed by node id)
-- `create_time` / `update_time` (Unix seconds, used for timestamp fallback)
+- `create_time` (Unix seconds, used as conversation-level created timestamp)
+- `update_time` (Unix seconds, used for message timestamp fallback)
 
 ### Message-level fields observed
 #### Claude format
@@ -56,11 +67,15 @@ The parser contract is anchored to real examples under `docs/`:
 - ChatGPT traversal follows the `current_node` ancestry path (active branch); if unavailable, traversal falls back to root-based graph walk.
 - Empty/blank messages are skipped.
 - Hidden ChatGPT messages are skipped.
+- Conversation created timestamp fallback:
+  - Claude: `conversation.created_at` -> oldest message `created_at`.
+  - ChatGPT: `conversation.create_time` -> oldest parsed message timestamp on selected branch.
 - ChatGPT timestamp fallback order: message `create_time` -> ancestor `create_time` -> conversation `create_time` -> conversation `update_time`.
 
 ### Output contract sent to frontend
 - `conversationId`
 - `conversationName`
+- `conversationCreatedAt`
 - `speaker`
 - `message`
 - `messageTimestamp`
@@ -71,8 +86,9 @@ The parser contract is anchored to real examples under `docs/`:
 graph TD
     subgraph "Frontend (React)"
         AppC["App.tsx"]
+        SortUI["Sort Button + Sort Mode State"]
         Bindings["Wails JS Bindings"]
-        Logic["models/conversations.ts"]
+        Logic["models/conversations.ts (group + sort domain logic)"]
         CompList["components/ConversationList.tsx"]
         CompPanel["Memoized ConversationPanel"]
         Utils["utils/timestamps.ts"]
@@ -91,10 +107,12 @@ graph TD
     end
 
     AppC -->|Calls| Bindings
+    AppC -->|Controls| SortUI
     AppC -->|Uses| Logic
     AppC -->|Renders| CompList
     CompList -->|Renders| CompPanel
     CompPanel -->|Uses| Utils
+    SortUI -->|Cycles mode + triggers re-sort| Logic
     Bindings <-->|IPC| Runtime
     Main -->|Initializes| AppGo
     AppGo -->|Uses| Runtime
@@ -131,6 +149,7 @@ The backend is responsible for:
 - **`ConversationEntry` struct** (`models/parser.go`):
   - `ConversationID`
   - `ConversationName`
+  - `ConversationCreatedAt`
   - `Speaker`
   - `Message`
   - `MessageTimestamp`
@@ -147,13 +166,16 @@ The frontend is an SPA served by Wails.
 - Vitest + React Testing Library
 
 ### Key Components
-- `App.tsx`: manages loading state and requests export data via `OpenConversationsFile()`.
-- `models/conversations.ts`: groups flat entries into conversation threads.
-- `components/ConversationList.tsx`: renders thread summaries and delegates each thread to a memoized panel component so toggling one thread does not re-render all expanded threads.
-- `utils/timestamps.ts`: formats timestamps into local display format.
+- `App.tsx`: manages loading state, the active sort mode, and the sort-cycle button (`Sorted by ...`).
+- `models/conversations.ts`: groups flat entries into conversation threads, derives `conversationCreatedAt` for each thread, and applies deterministic sorting with explicit tie-breakers.
+- `components/ConversationList.tsx`: renders thread summaries (name, message count, UUID, created date) and delegates each thread to a memoized panel component so toggling one thread does not re-render all expanded threads.
+- `utils/timestamps.ts`: formats message timestamps (second precision) and conversation summary timestamps (minute precision) into local display format.
 
 ### Frontend Performance Note
-- Conversation expansion state is stored in `ConversationList`, but each thread panel is memoized and receives a stable `onToggle` callback. This keeps timestamp formatting and message re-rendering scoped to the panel being toggled.
+- Conversation grouping precomputes sortable metadata (`conversationCreatedAt`, parsed epoch milliseconds, raw name key), so sort operations avoid repeated timestamp parsing.
+- Sorting uses deterministic comparators (including UTF-8-safe lexical comparison through `Intl.Collator`) and explicit tie-breakers (`name` then `conversationId`).
+- `ConversationList` uses stable panel keys and resets expansion state only when a new conversation dataset is loaded (not when sort mode changes). This preserves expanded/collapsed state while reordering.
+- Per-panel memoization and localized toggle state updates keep collapse/expand interactions low-latency by limiting re-render scope.
 
 ## User Journey (Data Flow)
 
@@ -161,6 +183,7 @@ The frontend is an SPA served by Wails.
 sequenceDiagram
     actor User
     participant UI as "App.tsx"
+    participant Domain as "Conversation Domain (group + sort)"
     participant List as "ConversationList"
     participant Panel as "Memoized ConversationPanel"
     participant Backend as "Backend (App)"
@@ -207,11 +230,21 @@ sequenceDiagram
         Backend-->>UI: []ConversationEntry
     end
 
-    UI->>UI: Group entries (by ID/name)
+    UI->>Domain: Group entries (by ID/name)
+    Domain-->>UI: Conversation threads + created-at sort metadata
+    UI->>Domain: Apply default sort (Created oldest)
+    Domain-->>UI: Sorted conversations
     UI->>List: Render(conversations)
     List->>Panel: Render per-conversation panel
     Panel->>Panel: Toggle only selected panel state
     Panel->>Panel: Mount/unmount selected thread messages
     Panel->>Utils: Format selected thread message timestamps
     Panel-->>User: Display expanded/collapsed conversation
+
+    User->>UI: Click "Sorted by ..."
+    UI->>UI: Cycle sort mode
+    UI->>Domain: Re-sort existing threads
+    Domain-->>UI: Re-ordered conversations
+    UI->>List: Re-render list order (preserve expansion state)
+    List-->>User: Updated conversation order
 ```

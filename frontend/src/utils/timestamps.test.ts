@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {formatMessageTimestamp} from './timestamps';
+import {formatConversationTimestamp, formatMessageTimestamp} from './timestamps';
 
 function getExpectedTimezoneLabel(date: Date): string {
     const parts = new Intl.DateTimeFormat(undefined, {timeZoneName: 'short'}).formatToParts(date);
@@ -24,6 +24,19 @@ function formatExpectedLocalTimestamp(timestamp: string): string {
     return `${localTime} ${timezoneLabel}`;
 }
 
+function formatExpectedLocalConversationTimestamp(timestamp: string): string {
+    const date = new Date(timestamp);
+    const pad2 = (value: number) => String(value).padStart(2, '0');
+    const timezoneLabel = getExpectedTimezoneLabel(date);
+
+    const localTime = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+    if (timezoneLabel === '') {
+        return localTime;
+    }
+
+    return `${localTime} ${timezoneLabel}`;
+}
+
 describe('formatMessageTimestamp', () => {
     it('returns unknown label for empty timestamps', () => {
         expect(formatMessageTimestamp('')).toBe('Unknown time');
@@ -38,5 +51,22 @@ describe('formatMessageTimestamp', () => {
     it('formats valid timestamps into local time to second precision', () => {
         const input = '2025-09-19T04:41:47.942021Z';
         expect(formatMessageTimestamp(input)).toBe(formatExpectedLocalTimestamp(input));
+    });
+});
+
+describe('formatConversationTimestamp', () => {
+    it('returns unknown label for empty timestamps', () => {
+        expect(formatConversationTimestamp('')).toBe('Unknown time');
+        expect(formatConversationTimestamp('   ')).toBe('Unknown time');
+        expect(formatConversationTimestamp(undefined)).toBe('Unknown time');
+    });
+
+    it('returns original value when timestamp is not parseable', () => {
+        expect(formatConversationTimestamp('not-a-date')).toBe('not-a-date');
+    });
+
+    it('formats valid timestamps into local time to minute precision', () => {
+        const input = '2025-09-19T04:41:47.942021Z';
+        expect(formatConversationTimestamp(input)).toBe(formatExpectedLocalConversationTimestamp(input));
     });
 });

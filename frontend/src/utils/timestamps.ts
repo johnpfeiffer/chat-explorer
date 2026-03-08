@@ -17,7 +17,7 @@ function getLocalTimezoneLabel(date: Date): string {
     return '';
 }
 
-export function formatMessageTimestamp(timestamp: string | undefined): string {
+function formatTimestamp(timestamp: string | undefined, includeSeconds: boolean): string {
     const trimmedTimestamp = (timestamp ?? '').trim();
     if (trimmedTimestamp === '') {
         return 'Unknown time';
@@ -33,12 +33,20 @@ export function formatMessageTimestamp(timestamp: string | undefined): string {
     const day = pad2(parsedTimestamp.getDate());
     const hours = pad2(parsedTimestamp.getHours());
     const minutes = pad2(parsedTimestamp.getMinutes());
-    const seconds = pad2(parsedTimestamp.getSeconds());
+    const seconds = includeSeconds ? `:${pad2(parsedTimestamp.getSeconds())}` : '';
     const timezoneLabel = getLocalTimezoneLabel(parsedTimestamp);
 
-    const localTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    const localTime = `${year}-${month}-${day} ${hours}:${minutes}${seconds}`;
     if (timezoneLabel === '') {
         return localTime;
     }
     return `${localTime} ${timezoneLabel}`;
+}
+
+export function formatMessageTimestamp(timestamp: string | undefined): string {
+    return formatTimestamp(timestamp, true);
+}
+
+export function formatConversationTimestamp(timestamp: string | undefined): string {
+    return formatTimestamp(timestamp, false);
 }

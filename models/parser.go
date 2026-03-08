@@ -11,16 +11,18 @@ import (
 )
 
 type ConversationEntry struct {
-	ConversationID   string `json:"conversationId"`
-	ConversationName string `json:"conversationName"`
-	Speaker          string `json:"speaker"`
-	Message          string `json:"message"`
-	MessageTimestamp string `json:"messageTimestamp"`
+	ConversationID        string `json:"conversationId"`
+	ConversationName      string `json:"conversationName"`
+	ConversationCreatedAt string `json:"conversationCreatedAt"`
+	Speaker               string `json:"speaker"`
+	Message               string `json:"message"`
+	MessageTimestamp      string `json:"messageTimestamp"`
 }
 
 type rawConversation struct {
 	UUID         string           `json:"uuid"`
 	Name         string           `json:"name"`
+	CreatedAt    string           `json:"created_at"`
 	ChatMessages []rawChatMessage `json:"chat_messages"`
 }
 
@@ -108,6 +110,8 @@ func parseConversation(rawConversationJSON json.RawMessage) ([]ConversationEntry
 }
 
 func parseClaudeConversation(conversation rawConversation) []ConversationEntry {
+	conversationCreatedAt := resolveClaudeConversationCreatedAt(conversation)
+
 	entries := make([]ConversationEntry, 0, len(conversation.ChatMessages))
 	for _, chatMessage := range conversation.ChatMessages {
 		message := extractMessageText(chatMessage)
@@ -121,11 +125,12 @@ func parseClaudeConversation(conversation rawConversation) []ConversationEntry {
 		}
 
 		entries = append(entries, ConversationEntry{
-			ConversationID:   conversation.UUID,
-			ConversationName: conversation.Name,
-			Speaker:          speaker,
-			Message:          message,
-			MessageTimestamp: extractMessageTimestamp(chatMessage),
+			ConversationID:        conversation.UUID,
+			ConversationName:      conversation.Name,
+			ConversationCreatedAt: conversationCreatedAt,
+			Speaker:               speaker,
+			Message:               message,
+			MessageTimestamp:      extractMessageTimestamp(chatMessage),
 		})
 	}
 
@@ -136,6 +141,7 @@ func parseChatGPTConversation(conversation rawChatGPTConversation) []Conversatio
 	selectedNodeIDs := selectedChatGPTNodeIDs(conversation)
 
 	entries := make([]ConversationEntry, 0, len(selectedNodeIDs))
+	oldestMessageTimestamp := ""
 	for _, nodeID := range selectedNodeIDs {
 		node, exists := conversation.Mapping[nodeID]
 		if !exists {
@@ -147,7 +153,16 @@ func parseChatGPTConversation(conversation rawChatGPTConversation) []Conversatio
 			continue
 		}
 
+		oldestMessageTimestamp = olderTimestamp(oldestMessageTimestamp, entry.MessageTimestamp)
 		entries = append(entries, entry)
+	}
+
+	conversationCreatedAt := formatUnixTimestamp(conversation.CreateTime)
+	if conversationCreatedAt == "" {
+		conversationCreatedAt = oldestMessageTimestamp
+	}
+	for index := range entries {
+		entries[index].ConversationCreatedAt = conversationCreatedAt
 	}
 
 	return entries
@@ -286,11 +301,12 @@ func toChatGPTConversationEntry(conversation rawChatGPTConversation, node rawCha
 	}
 
 	return ConversationEntry{
-		ConversationID:   strings.TrimSpace(conversation.ConversationID),
-		ConversationName: conversation.Title,
-		Speaker:          speaker,
-		Message:          message,
-		MessageTimestamp: resolveChatGPTMessageTimestamp(conversation, node),
+		ConversationID:        strings.TrimSpace(conversation.ConversationID),
+		ConversationName:      conversation.Title,
+		ConversationCreatedAt: "",
+		Speaker:               speaker,
+		Message:               message,
+		MessageTimestamp:      resolveChatGPTMessageTimestamp(conversation, node),
 	}, true
 }
 
@@ -397,6 +413,45 @@ func extractMessageText(chatMessage rawChatMessage) string {
 
 func extractMessageTimestamp(chatMessage rawChatMessage) string {
 	return strings.TrimSpace(chatMessage.CreatedAt)
+}
+
+func resolveClaudeConversationCreatedAt(conversation rawConversation) string {
+	if conversationCreatedAt := strings.TrimSpace(conversation.CreatedAt); conversationCreatedAt != "" {
+		return conversationCreatedAt
+	}
+
+	oldestMessageTimestamp := ""
+	for _, chatMessage := range conversation.ChatMessages {
+		oldestMessageTimestamp = olderTimestamp(oldestMessageTimestamp, extractMessageTimestamp(chatMessage))
+	}
+
+	return oldestMessageTimestamp
+}
+
+func olderTimestamp(current string, candidate string) string {
+	trimmedCandidate := strings.TrimSpace(candidate)
+	if trimmedCandidate == "" {
+		return current
+	}
+
+	trimmedCurrent := strings.TrimSpace(current)
+	if trimmedCurrent == "" {
+		return trimmedCandidate
+	}
+
+	currentTime, currentErr := time.Parse(time.RFC3339Nano, trimmedCurrent)
+	candidateTime, candidateErr := time.Parse(time.RFC3339Nano, trimmedCandidate)
+	if currentErr == nil && candidateErr == nil {
+		if candidateTime.Before(currentTime) {
+			return trimmedCandidate
+		}
+		return trimmedCurrent
+	}
+	if currentErr != nil && candidateErr == nil {
+		return trimmedCandidate
+	}
+
+	return trimmedCurrent
 }
 
 func collectText(node any, parts *[]string) {

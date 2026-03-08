@@ -1,17 +1,20 @@
 # chat-explorer
 
-A desktop app for visualizing and exploring the data conversations exported from an LLM chat app like Claude.
+If you are concerned about Privacy, you can export your data from OpenAI or Anthropic and then delete the conversations.
 
-*Note that private data stays private with an entirely local desktop app.*
+Additionally removing extraneous or older conversations, and possibly manually updating the "Memory", can make Claude or ChatGPT more focused and effective.
+
+This is a desktop app for visualizing and exploring the Conversations exported from an LLM chat application like Claude or ChatGPT.
+
+*Note that private data stays private with an open source, entirely local, desktop app.*
 
 - <https://support.claude.com/en/articles/9450526-how-can-i-export-my-claude-data>
 
+- <https://privacy.claude.com/en/articles/10023548-how-long-do-you-store-my-data>
+
 - <https://help.openai.com/en/articles/7260999-how-do-i-export-my-chatgpt-history-and-data>
 
-
-## TODO
-
-- support a ChatGPT export
+- <https://help.openai.com/en/articles/8983778-chat-and-file-retention-policies-in-chatgpt>
 
 # Technical Details
 
@@ -44,8 +47,9 @@ Incrementally you can check things with:
 
 # Building
 
-`wails build` to create the output binary
+`wails build` to create the output binary (for MacOS, Windows, or Linux)
 
+<https://wails.io/docs/guides/manual-builds/>
 
 # AI Agents
 
