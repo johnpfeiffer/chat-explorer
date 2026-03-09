@@ -139,10 +139,30 @@ func parseClaudeConversation(conversation rawConversation) []ConversationEntry {
 
 func parseChatGPTConversation(conversation rawChatGPTConversation) []ConversationEntry {
 	selectedNodeIDs := selectedChatGPTNodeIDs(conversation)
+	entries, oldestMessageTimestamp := parseChatGPTConversationEntries(conversation, selectedNodeIDs)
 
-	entries := make([]ConversationEntry, 0, len(selectedNodeIDs))
+	// Older exports can self-reference current_node to a non-message root node.
+	// If current-node traversal yields no renderable entries, fall back to full graph walk.
+	if len(entries) == 0 && strings.TrimSpace(conversation.CurrentNode) != "" {
+		fallbackNodeIDs := collectNodeIDsFromRoots(conversation.Mapping)
+		entries, oldestMessageTimestamp = parseChatGPTConversationEntries(conversation, fallbackNodeIDs)
+	}
+
+	conversationCreatedAt := formatUnixTimestamp(conversation.CreateTime)
+	if conversationCreatedAt == "" {
+		conversationCreatedAt = oldestMessageTimestamp
+	}
+	for index := range entries {
+		entries[index].ConversationCreatedAt = conversationCreatedAt
+	}
+
+	return entries
+}
+
+func parseChatGPTConversationEntries(conversation rawChatGPTConversation, nodeIDs []string) ([]ConversationEntry, string) {
+	entries := make([]ConversationEntry, 0, len(nodeIDs))
 	oldestMessageTimestamp := ""
-	for _, nodeID := range selectedNodeIDs {
+	for _, nodeID := range nodeIDs {
 		node, exists := conversation.Mapping[nodeID]
 		if !exists {
 			continue
@@ -157,15 +177,7 @@ func parseChatGPTConversation(conversation rawChatGPTConversation) []Conversatio
 		entries = append(entries, entry)
 	}
 
-	conversationCreatedAt := formatUnixTimestamp(conversation.CreateTime)
-	if conversationCreatedAt == "" {
-		conversationCreatedAt = oldestMessageTimestamp
-	}
-	for index := range entries {
-		entries[index].ConversationCreatedAt = conversationCreatedAt
-	}
-
-	return entries
+	return entries, oldestMessageTimestamp
 }
 
 func selectedChatGPTNodeIDs(conversation rawChatGPTConversation) []string {

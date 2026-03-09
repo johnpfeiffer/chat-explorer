@@ -39,6 +39,7 @@ const mockConversations: ConversationThread[] = [
             {
                 conversationId: 'conv-1',
                 conversationName: 'First Conversation',
+                conversationCreatedAt: '2025-09-19T04:41:47.942021Z',
                 speaker: 'human',
                 message: 'Hello',
                 messageTimestamp: '2025-09-19T04:41:47.942021Z'
@@ -54,6 +55,7 @@ const mockConversations: ConversationThread[] = [
             {
                 conversationId: 'conv-2',
                 conversationName: 'Second Conversation',
+                conversationCreatedAt: '2025-09-19T04:42:47.942021Z',
                 speaker: 'assistant',
                 message: 'Hi there',
                 messageTimestamp: '2025-09-19T04:42:47.942021Z'
@@ -186,6 +188,7 @@ describe('ConversationList', () => {
                     {
                         conversationId: 'conv-chatgpt',
                         conversationName: 'ChatGPT Conversation',
+                        conversationCreatedAt: '2025-09-19T04:41:47.942021Z',
                         speaker: 'user',
                         message: 'ChatGPT user message',
                         messageTimestamp: '2025-09-19T04:41:47.942021Z'
@@ -232,6 +235,7 @@ describe('ConversationList', () => {
                 messages: Array.from({length: 8}, (_, index) => ({
                     conversationId: 'conv-latency',
                     conversationName: 'Latency',
+                    conversationCreatedAt: '2026-01-01T00:00:00Z',
                     speaker: index % 2 === 0 ? 'human' : 'assistant',
                     message: `message-${index}`,
                     messageTimestamp: `2026-01-01T00:00:0${index}Z`
